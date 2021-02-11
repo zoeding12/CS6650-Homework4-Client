@@ -7,7 +7,9 @@ import io.swagger.client.api.PurchaseApi;
 import io.swagger.client.model.Purchase;
 import io.swagger.client.model.PurchaseItems;
 
+import java.time.Instant;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,11 +37,16 @@ public class StoreThread implements Runnable{
     private AtomicInteger totalRequest;
     private AtomicInteger successRequest;
 
+    private Instant beforeRequest;
+    private Instant afterRequest;
+    BlockingQueue<String> outputBuffer;
+
     public StoreThread(int storeID, int customerPerStore, int maxItemID, int numOfPurchasePerHour,
                        int numOfItemPerPurchase, String date, String serverIP,
                        CountDownLatch threeHourGate, CountDownLatch fiveHourGate, CountDownLatch allStoresClosed,
                        AtomicBoolean reachThree, AtomicBoolean reachFive, 
-                       AtomicInteger totalRequest, AtomicInteger successRequest) {
+                       AtomicInteger totalRequest, AtomicInteger successRequest,
+                       BlockingQueue<String> outputBuffer) {
         this.storeID = storeID;
         this.customerPerStore = customerPerStore;
         this.maxItemID = maxItemID;
@@ -54,6 +61,7 @@ public class StoreThread implements Runnable{
         this.reachFive = reachFive;
         this.totalRequest = totalRequest;
         this.successRequest = successRequest;
+        this.outputBuffer = outputBuffer;
     }
 
     @Override
@@ -93,7 +101,12 @@ public class StoreThread implements Runnable{
         Integer custID = random.nextInt(this.getCustomerPerStore()) + getStoreID() * 1000;
 
         try {
+            beforeRequest = Instant.now();
             ApiResponse response = apiInstance.newPurchaseWithHttpInfo(body, this.getStoreID(), custID, this.getDate());
+            afterRequest = Instant.now();
+            String outputLine = String.format("%s,POST,%d,%d\n",
+                    beforeRequest.toString(), afterRequest.toEpochMilli() - beforeRequest.toEpochMilli(), response.getStatusCode());
+            outputBuffer.put(outputLine);
             if(response.getStatusCode() == 201){
                 successRequest.incrementAndGet();
             }
@@ -102,6 +115,8 @@ public class StoreThread implements Runnable{
 //            System.out.println("The customer is: " + custID);
         } catch (ApiException e) {
             System.err.println("Exception when calling PurchaseApi#newPurchase");
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

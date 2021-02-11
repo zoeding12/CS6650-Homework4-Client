@@ -6,11 +6,15 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientRunner {
+    private static final int OPERATING_HOURS = 9;
+
     public static void main(String[] args) {
 
         CountDownLatch threeHourGate = new CountDownLatch(1);
@@ -62,14 +66,22 @@ public class ClientRunner {
         }
 
         CountDownLatch allStoresClosed = new CountDownLatch(maxStores);
+        AtomicBoolean closeCsvWriter = new AtomicBoolean();
+        BlockingQueue<String> outputBuffer = new LinkedBlockingDeque(maxStores * numOfPurchasePerHour * OPERATING_HOURS);
+
+        // start the csv writer
+        CsvWriter csvWriter = new CsvWriter(outputBuffer, maxStores, closeCsvWriter);
+        Thread csvWriterThread = new Thread(csvWriter);
+        csvWriterThread.start();
 
         Instant startTime = staggeredOpening(threeHourGate, fiveHourGate, allStoresClosed, maxStores, customerPerStore, maxItemID, numOfPurchasePerHour,
-                numOfItemPerPurchase, date, serverIP, reachThree, reachFive, totalRequest, successRequest);
+                numOfItemPerPurchase, date, serverIP, reachThree, reachFive, totalRequest, successRequest, outputBuffer);
 
         Instant endTime = null;
         try {
             allStoresClosed.await();
             endTime = Instant.now();
+            closeCsvWriter.set(true);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -87,7 +99,8 @@ public class ClientRunner {
                                            int maxStores, int customerPerStore, int maxItemID, int numOfPurchasePerHour,
                                            int numOfItemPerPurchase, String date, String serverIP,
                                            AtomicBoolean reachThree, AtomicBoolean reachFive,
-                                           AtomicInteger totalRequest, AtomicInteger successRequest){
+                                           AtomicInteger totalRequest, AtomicInteger successRequest,
+                                           BlockingQueue<String> outputBuffer){
         int halfStores = maxStores / 2;
         int quarterStores = maxStores / 4;
         int openedStoresCount = 0;
@@ -98,7 +111,7 @@ public class ClientRunner {
         launchStores(quarterStores, openedStoresCount, customerPerStore, maxItemID, numOfPurchasePerHour,
                 numOfItemPerPurchase, date, serverIP,
                 threeHourGate, fiveHourGate, allStoresClosed, reachThree, reachFive,
-                totalRequest, successRequest);
+                totalRequest, successRequest, outputBuffer);
         openedStoresCount += quarterStores;
 
         // central phase stores open
@@ -111,7 +124,7 @@ public class ClientRunner {
         launchStores(halfStores, openedStoresCount, customerPerStore, maxItemID, numOfPurchasePerHour,
                 numOfItemPerPurchase, date, serverIP,
                 threeHourGate, fiveHourGate, allStoresClosed, reachThree, reachFive,
-                totalRequest, successRequest);
+                totalRequest, successRequest, outputBuffer);
         openedStoresCount += halfStores;
 
         // west phase stores open
@@ -124,7 +137,7 @@ public class ClientRunner {
         launchStores(quarterStores, openedStoresCount, customerPerStore, maxItemID, numOfPurchasePerHour,
                 numOfItemPerPurchase, date, serverIP,
                 threeHourGate, fiveHourGate, allStoresClosed, reachThree, reachFive,
-                totalRequest, successRequest);
+                totalRequest, successRequest, outputBuffer);
         openedStoresCount += quarterStores;
         return startTime;
     }
@@ -132,12 +145,13 @@ public class ClientRunner {
     public static void launchStores(int num, int openedStoresCount, int customerPerStore, int maxItemID,
                                    int numOfPurchasePerHour, int numOfItemPerPurchase, String date, String serverIP,
                                    CountDownLatch threeHourGate, CountDownLatch fiveHourGate, CountDownLatch allStoresClosed,
-                                   AtomicBoolean reachThree, AtomicBoolean reachFive, AtomicInteger totalRequest, AtomicInteger successRequest){
+                                   AtomicBoolean reachThree, AtomicBoolean reachFive, AtomicInteger totalRequest,
+                                    AtomicInteger successRequest, BlockingQueue<String> outputBuffer){
         for(int i = 0; i < num; i++){
             StoreThread store = new StoreThread(openedStoresCount + i + 1, customerPerStore, maxItemID,
                     numOfPurchasePerHour, numOfItemPerPurchase, date, serverIP,
                     threeHourGate, fiveHourGate, allStoresClosed, reachThree, reachFive,
-                    totalRequest, successRequest);
+                    totalRequest, successRequest, outputBuffer);
             Thread thread = new Thread(store);
             thread.start();
         }
