@@ -9,13 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CsvWriter implements Runnable{
     private BlockingQueue<String> buffer;
     private int maxStores;
-    private AtomicBoolean closeCsvWriter;
     private FileWriter fw;
 
-    public CsvWriter(BlockingQueue<String> buffer, int maxStores, AtomicBoolean closeCsvWriter) {
+    public CsvWriter(BlockingQueue<String> buffer, int maxStores) {
         this.buffer = buffer;
         this.maxStores = maxStores;
-        this.closeCsvWriter = closeCsvWriter;
     }
 
     @Override
@@ -23,8 +21,11 @@ public class CsvWriter implements Runnable{
         FileWriter fw = null;
         try{
             fw = new FileWriter("test" + maxStores + ".csv");
-            while(!closeCsvWriter.get()){
+            while(true){
                 String record = buffer.take();
+                if(record.equals("END_OF_FILE")){
+                    break;
+                }
                 fw.append(record);
             }
             fw.close();

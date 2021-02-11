@@ -66,11 +66,10 @@ public class ClientRunner {
         }
 
         CountDownLatch allStoresClosed = new CountDownLatch(maxStores);
-        AtomicBoolean closeCsvWriter = new AtomicBoolean();
         BlockingQueue<String> outputBuffer = new LinkedBlockingDeque(maxStores * numOfPurchasePerHour * OPERATING_HOURS);
 
         // start the csv writer
-        CsvWriter csvWriter = new CsvWriter(outputBuffer, maxStores, closeCsvWriter);
+        CsvWriter csvWriter = new CsvWriter(outputBuffer, maxStores);
         Thread csvWriterThread = new Thread(csvWriter);
         csvWriterThread.start();
 
@@ -81,7 +80,7 @@ public class ClientRunner {
         try {
             allStoresClosed.await();
             endTime = Instant.now();
-            closeCsvWriter.set(true);
+            outputBuffer.put("END_OF_FILE");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

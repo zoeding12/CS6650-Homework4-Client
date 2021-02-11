@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="82e04432-9890-4ce4-8640-14e36436ab81" name="aws-client">
+        <fileTransfer rootFolder="/home/ec2-user" accessType="SFTP" host="54.160.70.122" port="22" sshConfigId="adfca097-5f79-4d70-82a7-8f225f69df6d" sshConfig="ec2-user@54.160.70.122:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
