@@ -34,35 +34,39 @@ public class ClientRunner {
         String[] input = sc.nextLine().split(",");
 
         // set default values
-        int maxStores = 12;
+        int maxStores = 32;
         int customerPerStore = 1000;
         int maxItemID = 100000;
-        int numOfPurchasePerHour = 60;
+        int numOfPurchasePerHour = 300;
         int numOfItemPerPurchase = 5;
         String date = "20210101";
-        String serverIP = "http://ec2-107-21-83-193.compute-1.amazonaws.com:8080/homework_war_archive";
+        // load balancer
+        String serverIP = "http://ec2-user@6650-load-balancer-1742320416.us-east-1.elb.amazonaws.com:8080/zoe_server";
+        // main server
+//        String serverIP = "http://ec2-user@ec2-3-82-198-8.compute-1.amazonaws.com:8080/zoe_server";
+//        String serverIP = "http://localhost:8080/zoe_server";
 
         // validate input
-        if(input == null || input.length == 0){
-            System.out.println("Invalid Input, Exit");
-            System.exit(-1);
-        }
-        try{
-            maxStores = Integer.parseInt(input[0]);
-            customerPerStore = Integer.parseInt(input[1]);
-            maxItemID = Integer.parseInt(input[2]);
-            numOfPurchasePerHour = Integer.parseInt(input[3]);
-            numOfItemPerPurchase = Integer.parseInt(input[4]);
-            if(input[5].matches("[0-9]+") && isDateValid(input[5])){
-                date = input[5];
+        if(input == null || input.length == 0 || (input.length == 1 && input[0].equals(""))){
+            System.out.println("Use default values");
+        }else{
+            try{
+                maxStores = Integer.parseInt(input[0]);
+                customerPerStore = Integer.parseInt(input[1]);
+                maxItemID = Integer.parseInt(input[2]);
+                numOfPurchasePerHour = Integer.parseInt(input[3]);
+                numOfItemPerPurchase = Integer.parseInt(input[4]);
+                if(input[5].matches("[0-9]+") && isDateValid(input[5])){
+                    date = input[5];
+                }
+                if(!input[6].equals(" ")){
+                    serverIP = input[6];
+                }
+            }catch (NumberFormatException e){
+                e.printStackTrace();
+                System.out.println("Invalid Input, Exit");
+                System.exit(-1);
             }
-            if(!input[6].equals(" ")){
-                serverIP = "http://ec2-107-21-83-193.compute-1.amazonaws.com:8080/homework_war_archive";
-            }
-        }catch (NumberFormatException e){
-            e.printStackTrace();
-            System.out.println("Invalid Input, Exit");
-            System.exit(-1);
         }
 
         CountDownLatch allStoresClosed = new CountDownLatch(maxStores);

@@ -8,6 +8,8 @@ import io.swagger.client.model.Purchase;
 import io.swagger.client.model.PurchaseItems;
 
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -40,6 +42,8 @@ public class StoreThread implements Runnable{
     private Instant beforeRequest;
     private Instant afterRequest;
     BlockingQueue<String> outputBuffer;
+    Queue<String> tempQueue;
+
 
     public StoreThread(int storeID, int customerPerStore, int maxItemID, int numOfPurchasePerHour,
                        int numOfItemPerPurchase, String date, String serverIP,
@@ -62,6 +66,7 @@ public class StoreThread implements Runnable{
         this.totalRequest = totalRequest;
         this.successRequest = successRequest;
         this.outputBuffer = outputBuffer;
+        this.tempQueue = new ArrayDeque<>();
     }
 
     @Override
@@ -81,6 +86,13 @@ public class StoreThread implements Runnable{
                 fiveHourGate.countDown();
             }
         }
+        while(!tempQueue.isEmpty()){
+            try {
+                outputBuffer.put(tempQueue.poll());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         allStoresClosed.countDown();
     }
 
@@ -94,7 +106,8 @@ public class StoreThread implements Runnable{
         for(int i = 0; i < this.getNumOfItemPerPurchase(); i++){
             PurchaseItems item = new PurchaseItems();
             item.numberOfItems(1);
-            item.itemID(Integer.toString(random.nextInt(100000) + 1));
+            // the range of item_id is 1 ~ maxItemID
+            item.itemID(Integer.toString(random.nextInt(this.getMaxItemID()) + 1));
             body.addItemsItem(item);
         }
 
@@ -104,19 +117,15 @@ public class StoreThread implements Runnable{
             beforeRequest = Instant.now();
             ApiResponse response = apiInstance.newPurchaseWithHttpInfo(body, this.getStoreID(), custID, this.getDate());
             afterRequest = Instant.now();
-            String outputLine = String.format("%s,POST,%d,%d\n",
-                    beforeRequest.toString(), afterRequest.toEpochMilli() - beforeRequest.toEpochMilli(), response.getStatusCode());
-            outputBuffer.put(outputLine);
+            String outputLine = beforeRequest.toString() + ",POST," + (afterRequest.toEpochMilli() - beforeRequest.toEpochMilli()) + "," + response.getStatusCode() + "\n";
+            tempQueue.offer(outputLine);
             if(response.getStatusCode() == 201){
                 successRequest.incrementAndGet();
             }
             totalRequest.incrementAndGet();
-//            System.out.println("store " + getStoreID() + ", returns: " + response.getStatusCode());
-//            System.out.println("The customer is: " + custID);
+
         } catch (ApiException e) {
             System.err.println("Exception when calling PurchaseApi#newPurchase");
-            e.printStackTrace();
-        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -161,15 +170,4 @@ public class StoreThread implements Runnable{
         return date;
     }
 
-    public void setDate(String date) {
-        this.date = date;
-    }
-
-    public String getServerIP() {
-        return serverIP;
-    }
-
-    public void setServerIP(String serverIP) {
-        this.serverIP = serverIP;
-    }
 }
