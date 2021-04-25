@@ -40,11 +40,8 @@ public class ClientRunner {
         int numOfPurchasePerHour = 300;
         int numOfItemPerPurchase = 5;
         String date = "20210101";
-        // load balancer
-//        String serverIP = "http://6650-load-balancer-1742320416.us-east-1.elb.amazonaws.com:8080/zoe_server";
-        // main server
         String serverIP = "http://ec2-54-210-12-238.compute-1.amazonaws.com:8080/zoe_server";
-//        String serverIP = "http://localhost:8080/zoe_server";
+
 
         // validate input
         if(input == null || input.length == 0 || (input.length == 1 && input[0].equals(""))){
