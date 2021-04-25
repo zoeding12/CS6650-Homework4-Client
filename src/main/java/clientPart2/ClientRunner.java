@@ -34,16 +34,16 @@ public class ClientRunner {
         String[] input = sc.nextLine().split(",");
 
         // set default values
-        int maxStores = 32;
+        int maxStores = 256;
         int customerPerStore = 1000;
         int maxItemID = 100000;
         int numOfPurchasePerHour = 300;
         int numOfItemPerPurchase = 5;
         String date = "20210101";
         // load balancer
-        String serverIP = "http://ec2-user@6650-load-balancer-1742320416.us-east-1.elb.amazonaws.com:8080/zoe_server";
+//        String serverIP = "http://6650-load-balancer-1742320416.us-east-1.elb.amazonaws.com:8080/zoe_server";
         // main server
-//        String serverIP = "http://ec2-user@ec2-3-82-198-8.compute-1.amazonaws.com:8080/zoe_server";
+        String serverIP = "http://ec2-54-210-12-238.compute-1.amazonaws.com:8080/zoe_server";
 //        String serverIP = "http://localhost:8080/zoe_server";
 
         // validate input
